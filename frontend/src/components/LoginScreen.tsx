@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Animated,
+  Easing
 } from 'react-native';
 
 interface LoginScreenProps {
@@ -32,6 +34,27 @@ export default function LoginScreen({ onJoin }: LoginScreenProps) {
   const [selectedAvatarIdx, setSelectedAvatarIdx] = useState(0);
   const [error, setError] = useState('');
 
+  // Animation values for premium entry card feel
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardTranslateY = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardTranslateY, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [cardOpacity, cardTranslateY]);
+
   const handleJoin = () => {
     const trimmed = username.trim();
     if (!trimmed) {
@@ -52,8 +75,21 @@ export default function LoginScreen({ onJoin }: LoginScreenProps) {
       style={styles.container}
     >
       <StatusBar barStyle="light-content" />
+      
+      {/* Decorative Neon Mesh Ambient Glows */}
+      <View style={styles.glowTopRight} />
+      <View style={styles.glowBottomLeft} />
+
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
+        <Animated.View 
+          style={[
+            styles.card,
+            {
+              opacity: cardOpacity,
+              transform: [{ translateY: cardTranslateY }]
+            }
+          ]}
+        >
           <Text style={styles.title}>Welcome to Chat</Text>
           <Text style={styles.subtitle}>Connect in real-time with Ananya Sarkar and others.</Text>
 
@@ -103,7 +139,7 @@ export default function LoginScreen({ onJoin }: LoginScreenProps) {
           </TouchableOpacity>
 
           <Text style={styles.footerNote}>Powered by Socket.io • Express • React Native</Text>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -112,37 +148,60 @@ export default function LoginScreen({ onJoin }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
+    backgroundColor: '#070C18', // Deep twilight space color (slightly darker than slate-900 for more premium contrast)
     justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  glowTopRight: {
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#8B5CF6', // Purple 500
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    opacity: 0.12,
+  },
+  glowBottomLeft: {
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#6366F1', // Indigo 500
+    position: 'absolute',
+    bottom: -100,
+    left: -100,
+    opacity: 0.1,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+    zIndex: 2,
   },
   card: {
-    backgroundColor: '#1E293B', // Slate 800
-    borderRadius: 24,
+    backgroundColor: 'rgba(30, 41, 59, 0.75)', // Glass Slate-800
+    borderRadius: 30,
     padding: 28,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 12,
     borderWidth: 1,
-    borderColor: '#334155', // Slate 700
+    borderColor: 'rgba(255, 255, 255, 0.08)', // High-fidelity fine glass border
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#F8FAFC', // Slate 50
+    color: '#F8FAFC',
     textAlign: 'center',
     marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8', // Slate 400
+    color: '#94A3B8',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
@@ -151,17 +210,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#94A3B8',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    letterSpacing: 1,
+    marginBottom: 10,
   },
   input: {
     backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 14,
+    paddingHorizontal: 18,
     paddingVertical: 14,
     fontSize: 16,
     color: '#F8FAFC',
@@ -170,9 +229,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444', // Red 500
+    color: '#EF4444',
     marginTop: 6,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   avatarSection: {
     marginBottom: 32,
@@ -185,42 +244,43 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
     borderColor: 'transparent',
   },
   avatarSelected: {
-    borderColor: '#6366F1', // Indigo 500
-    transform: [{ scale: 1.1 }],
+    borderColor: '#6366F1',
+    transform: [{ scale: 1.15 }],
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 8,
   },
   avatarEmoji: {
-    fontSize: 24,
+    fontSize: 26,
   },
   button: {
-    backgroundColor: '#6366F1', // Indigo 500
-    borderRadius: 14,
+    backgroundColor: '#6366F1',
+    borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
     marginBottom: 20,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
   footerNote: {
     fontSize: 11,

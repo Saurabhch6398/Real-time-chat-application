@@ -10,7 +10,7 @@ import {
   Platform,
   SafeAreaView,
   ActivityIndicator,
-  Keyboard
+  ScrollView
 } from 'react-native';
 import io, { Socket } from 'socket.io-client';
 import Constants from 'expo-constants';
@@ -38,21 +38,29 @@ const getBackendUrl = (): string => {
 
 const BACKEND_URL = getBackendUrl();
 
+const QUICK_REPLIES = [
+  "Hi Ananya! 👋",
+  "How does Socket.io work? ⚡",
+  "Tell me a bit more! 🤔",
+  "This is awesome! 🎉"
+];
+
 export default function App() {
   const [username, setUsername] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string>('🌟');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isAnanyaOnline, setIsAnanyaOnline] = useState(true); // Ananya simulator is on the backend
+  const [isAnanyaOnline, setIsAnanyaOnline] = useState(true);
   const [isAnanyaTyping, setIsAnanyaTyping] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [serverUrl, setServerUrl] = useState(BACKEND_URL);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList<Message> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Connect to Socket.io and Fetch Message History once Username is chosen
+  // Connect to Socket.io and Fetch Message History
   useEffect(() => {
     if (!username) return;
 
@@ -64,7 +72,6 @@ export default function App() {
       .then((data) => {
         setMessages(data);
         setLoadingHistory(false);
-        // Scroll to bottom after loading messages
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       })
       .catch((err) => {
@@ -81,17 +88,14 @@ export default function App() {
 
     socket.on('connect', () => {
       console.log('Socket connected with ID:', socket.id);
-      // Join the chat server
       socket.emit('join', username);
     });
 
     socket.on('receive_message', (message: Message) => {
       setMessages((prev) => {
-        // Prevent duplicate messages in list if REST API + socket broadcast collide
         if (prev.some((m) => m.id === message.id)) return prev;
         return [...prev, message];
       });
-      // Scroll to bottom
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
@@ -125,21 +129,17 @@ export default function App() {
     };
   }, [username, serverUrl]);
 
-  // Handle typing input changes and socket typing status trigger
+  // Handle typing input changes
   const handleInputChange = (text: string) => {
     setInputText(text);
-
     if (!socketRef.current) return;
 
-    // Send typing status to server
     socketRef.current.emit('typing', { user: username });
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set new timeout to stop typing status after 1.5 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       if (socketRef.current) {
         socketRef.current.emit('stop_typing', { user: username });
@@ -148,17 +148,15 @@ export default function App() {
   };
 
   // Send message
-  const handleSend = () => {
-    const textToSend = inputText.trim();
-    if (!textToSend || !socketRef.current || !username) return;
+  const handleSend = (textToSend = inputText) => {
+    const trimmed = textToSend.trim();
+    if (!trimmed || !socketRef.current || !username) return;
 
-    // Emit the message over Socket.io
     socketRef.current.emit('send_message', {
-      text: textToSend,
+      text: trimmed,
       user: username
     });
 
-    // Clear typing indicator and input fields
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
@@ -183,7 +181,6 @@ export default function App() {
     return (
       <View style={styles.loginWrapper}>
         <LoginScreen onJoin={handleJoin} />
-        {/* Optional Server URL config for testing */}
         <View style={styles.serverConfigContainer}>
           <Text style={styles.serverConfigLabel}>Backend Server URL:</Text>
           <TextInput
@@ -200,6 +197,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
+      {/* Subtle background ambient mesh glows */}
+      <View style={styles.glowTopRight} />
+      <View style={styles.glowBottomLeft} />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
@@ -231,19 +232,41 @@ export default function App() {
           />
         )}
 
+        {/* Quick Replies Row */}
+        <View style={styles.quickRepliesContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRepliesScroll}>
+            {QUICK_REPLIES.map((reply, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.replyChip}
+                onPress={() => handleSend(reply)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.replyChipText}>{reply}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Input Bar */}
         <View style={styles.inputBar}>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              isInputFocused && styles.textInputFocused
+            ]}
             placeholder="Type your message..."
             placeholderTextColor="#64748B"
             value={inputText}
             onChangeText={handleInputChange}
-            onSubmitEditing={handleSend}
+            onSubmitEditing={() => handleSend()}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
             blurOnSubmit={false}
           />
           <TouchableOpacity
             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={!inputText.trim()}
             activeOpacity={0.8}
           >
@@ -258,12 +281,12 @@ export default function App() {
 const styles = StyleSheet.create({
   loginWrapper: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#070C18',
   },
   serverConfigContainer: {
     paddingHorizontal: 28,
     paddingBottom: 40,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#070C18',
   },
   serverConfigLabel: {
     color: '#64748B',
@@ -272,7 +295,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   serverConfigInput: {
-    backgroundColor: '#1E293B',
+    backgroundColor: 'rgba(30, 41, 59, 0.75)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -283,14 +306,37 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
+    backgroundColor: '#070C18', // Deep twilight dark background
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  glowTopRight: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: '#8B5CF6',
+    position: 'absolute',
+    top: 60,
+    right: -60,
+    opacity: 0.08,
+  },
+  glowBottomLeft: {
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#6366F1',
+    position: 'absolute',
+    bottom: 80,
+    left: -85,
+    opacity: 0.08,
   },
   keyboardContainer: {
     flex: 1,
+    zIndex: 2,
   },
   messagesList: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -302,20 +348,43 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
+  quickRepliesContainer: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(51, 65, 85, 0.3)',
+    backgroundColor: 'rgba(7, 12, 24, 0.6)',
+  },
+  quickRepliesScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  replyChip: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  replyChipText: {
+    color: '#E2E8F0',
+    fontSize: 13,
+    fontWeight: '500',
+  },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#1E293B', // Slate 800
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(30, 41, 59, 0.85)', // Glass effect Slate 800
     borderTopWidth: 1,
-    borderTopColor: '#334155', // Slate 700
+    borderTopColor: 'rgba(51, 65, 85, 0.5)',
   },
   textInput: {
     flex: 1,
     backgroundColor: '#0F172A',
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    borderRadius: 22,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     fontSize: 15,
     color: '#F8FAFC',
@@ -323,12 +392,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
   },
+  textInputFocused: {
+    borderColor: '#6366F1', // Glowing active border on focus
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   sendButton: {
     marginLeft: 10,
-    backgroundColor: '#6366F1', // Indigo 500
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    backgroundColor: '#6366F1',
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
