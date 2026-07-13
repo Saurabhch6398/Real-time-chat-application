@@ -26,8 +26,11 @@ interface Message {
   timestamp: string;
 }
 
-// Function to resolve backend URL. Handles localhost vs network IP (for physical devices).
+// Function to resolve backend URL. Handles environment variables, localhost vs network IP (for physical devices).
 const getBackendUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_BACKEND_URL) {
+    return process.env.EXPO_PUBLIC_BACKEND_URL;
+  }
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.hostUri;
   if (hostUri) {
     const ip = hostUri.split(':')[0];
