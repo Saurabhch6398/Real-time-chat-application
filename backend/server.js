@@ -33,6 +33,11 @@ app.set('socketio', io);
 // API Routes
 app.use('/api/messages', messagesRouter);
 
+// Root Route
+app.get('/', (req, res) => {
+  res.status(200).send('Real-Time Chatbot Backend is running successfully!');
+});
+
 // Basic Health Check Route
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
