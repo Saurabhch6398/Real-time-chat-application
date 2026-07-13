@@ -18,3 +18,9 @@ backend/database.json
 # System files
 .DS_Store
 Thumbs.db
+
+# Env files
+.env
+.env.*
+backend/.env
+backend/.env.*

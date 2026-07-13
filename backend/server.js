@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -5,9 +6,13 @@ const cors = require('cors');
 const os = require('os');
 const messagesRouter = require('./routes/messages');
 const { initSocket } = require('./socket/chat');
+const { connectDB } = require('./db');
 
 const app = express();
 const server = http.createServer(app);
+
+// Connect to MongoDB Atlas (if MONGODB_URI is provided)
+connectDB();
 
 // Enable CORS for frontend clients
 app.use(cors({

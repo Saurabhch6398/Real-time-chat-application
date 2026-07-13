@@ -30,7 +30,7 @@ function initSocket(io) {
     });
 
     // Handle incoming messages
-    socket.on('send_message', (data) => {
+    socket.on('send_message', async (data) => {
       console.log('Received message via socket:', data);
       const { text, user } = data;
 
@@ -47,7 +47,7 @@ function initSocket(io) {
       };
 
       // Save message in DB
-      const savedMessage = db.saveMessage(message);
+      const savedMessage = await db.saveMessage(message);
 
       if (savedMessage) {
         // Broadcast the saved message to all clients
@@ -113,7 +113,7 @@ function simulateAnanyaResponse(io, userMessage) {
     io.emit('typing', { user: 'Ananya Sarkar' });
 
     // 2. After another 2 seconds, stop typing and send the response
-    setTimeout(() => {
+    setTimeout(async () => {
       io.emit('stop_typing', { user: 'Ananya Sarkar' });
 
       const replyMessage = {
@@ -124,8 +124,10 @@ function simulateAnanyaResponse(io, userMessage) {
       };
 
       // Save and emit the reply
-      db.saveMessage(replyMessage);
-      io.emit('receive_message', replyMessage);
+      const savedReply = await db.saveMessage(replyMessage);
+      if (savedReply) {
+        io.emit('receive_message', savedReply);
+      }
     }, 2000);
 
   }, 1000);

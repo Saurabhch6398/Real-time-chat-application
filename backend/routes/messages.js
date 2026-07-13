@@ -7,9 +7,9 @@ const db = require('../db');
  * GET /api/messages
  * Fetches all previous messages.
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const messages = db.getMessages();
+    const messages = await db.getMessages();
     return res.status(200).json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -21,7 +21,7 @@ router.get('/', (req, res) => {
  * POST /api/messages
  * Sends a message, saves it, and broadcasts it over Socket.io.
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { text, user } = req.body;
 
@@ -36,7 +36,7 @@ router.post('/', (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    const saved = db.saveMessage(message);
+    const saved = await db.saveMessage(message);
     if (!saved) {
       return res.status(500).json({ error: 'Failed to save message to database' });
     }
